@@ -1,5 +1,8 @@
 import math
-from decimal import Decimal
+from decimal import Decimal, getcontext
+from fractions import Fraction
+
+# Set precision for Decimal operations
 
 # A class to store ANSI escape codes for colored terminal text output.
 class colors: 
@@ -34,44 +37,52 @@ def represent_in_words(number):
         word_representation = f"{number}" # If the number is less than 1000 write it the same way
     return word_representation
 
-def calculate(occurence_chance, target_probability = Decimal(0.5)):
+def estimate_jump_size(occurence_chance, difference, target_probability):
+    # A coefficient for the step size estimation. Higher values decrease the number of steps it takes to reach the target probability but may lead to overshooting.
+    ESTIMATION_COEFFICIENT = Decimal(1.5) # Recommended value is 1.35 as no overshooting was observed when target probability is 0.5.
+    
+    jump_size_estimate = math.floor((difference/occurence_chance) * ESTIMATION_COEFFICIENT * target_probability**2)
+    
+    return jump_size_estimate
+
+
+def calculate(occurence_chance, target_probability=Fraction(2, 5)):
     """
     Calculates the number of tries needed for an event with a given probability to become probable (chance ≥ 50%).
-
+    
     Parameters:
     occurence_chance (Decimal): The probability of an event occurring, ranging from 0 to 1. If negative, it triggers scientific mode.
-
+    
     This function prints intermediate steps and results, including the calculated number of tries and the probability.
     """
-    # The minimum probability that can be calculated with the current version of the method.
-    LOWER_PROBABILITY_LIMIT = "5E-29" 
-    # A coefficient for the step size estimation. Higher values decrease the number of steps it takes to reach the target probability but may lead to overshooting.
-    ESTIMATION_COEFFICIENT = Decimal(1.5) # Recommended value is 1.5 as no overshooting was observed when target probability is 0.5.
     
+    LOWER_PROBABILITY_LIMIT = "5E-29" # The minimum probability that can be calculated with the current version of the method.
+    TOLERANCE = Decimal("1E-10")  # Tolerance value to handle precision issues
+
     scientific_version = False
-    # Detect scientific version based on negative probability input and convert it back to a positive value
-    if (occurence_chance < 0):
+    if occurence_chance < 0: 
         scientific_version = True
-        occurence_chance *= -1 
+        occurence_chance *= -1
+    
+    # Convert Fraction to Decimal for printing and comparisons
+    target_probability_decimal = Decimal(target_probability.numerator) / Decimal(target_probability.denominator)
     
     print(f"\nAfter {colors.CYAN}each try{colors.RESET}, the chance of occurence is {colors.CYAN}{occurence_chance}{colors.RESET}\n")
     chance_of_not_occuring = 1 - occurence_chance
     current_prob = occurence_chance
     num_of_tries = 1
     calculation_steps = 0
-    difference = target_probability - occurence_chance
+
+    # Initial estimate for jump size
+    jump_size_estimate = estimate_jump_size(occurence_chance, target_probability_decimal - current_prob, target_probability_decimal)
     
-    # Initial guess for jump size in number of tries
-    jump_size_estimate = math.floor(1/occurence_chance/2)
-    
-    # Loop until the probability of occurrence after many tries becomes greater than or equal to the target probability
-    while(current_prob < target_probability):
-        if (jump_size_estimate < 1): # This prevents the guesstimate to get smaller than 1 in the final steps
+    while current_prob < target_probability_decimal:
+        if jump_size_estimate < 1: # This prevents the estimate to get smaller than 1 in the final steps
             jump_size_estimate = 1
         
         # Update number of tries needed by adding the jump size
-        num_of_tries += jump_size_estimate
-        remaining_prob = chance_of_not_occuring**num_of_tries
+        num_of_tries += int(jump_size_estimate)
+        remaining_prob = Decimal(chance_of_not_occuring) ** num_of_tries
         current_prob = 1 - remaining_prob
         
         # Display options for normal and scientific versions
@@ -84,28 +95,27 @@ def calculate(occurence_chance, target_probability = Decimal(0.5)):
             current_prob_display = f"{current_prob:.3f}"
         
         # Check for incalculably low probabilities
-        if(current_prob == 0):
-            print(f"The probability is too low to calculate. PLease enter a value higher than {LOWER_PROBABILITY_LIMIT}")
+        if current_prob < TOLERANCE:
+            print(f"The probability is too low to calculate. Please enter a value higher than {LOWER_PROBABILITY_LIMIT}")
             return
         
-         # Calculate the difference from the target probability of 50%
-        difference = target_probability - current_prob
+        difference = target_probability_decimal - current_prob
         
         calculation_steps += 1
         print(f"{calculation_steps}. step's jump size is {colors.BLUE}{jump_size_display}{colors.RESET}")
         print(f"After {colors.CYAN}{num_of_tries_display} tries{colors.RESET}, the chance of occurence is {colors.CYAN}{current_prob_display}{colors.RESET}\n")
-        print(remaining_prob)
-        # Adjust the jump size for the next iteration
-        jump_size_estimate = math.floor((difference/occurence_chance) * ESTIMATION_COEFFICIENT)
         
-        # On the non-scientific version, stops further calculations after the rounded probability is more than or equal to the target probability
+        # Adjust the jump size for the next iteration
+        jump_size_estimate = estimate_jump_size(occurence_chance, difference, target_probability_decimal)
+        
+         # On the non-scientific version, stops further calculations after the rounded probability is more than or equal to the target probability
         if(float(current_prob_display) >= target_probability and not scientific_version):
             print(f"It becomes probable after {colors.GREEN}{num_of_tries_display} tries{colors.RESET}")
             return
-            
-    # Print the final result once the loop terminates
-    print_answer(num_of_tries) 
+    
+    print_answer(num_of_tries)
     return
+
 
 # Prints the result, indicating the number of tries needed for the event to become probable.
 def print_answer(this_many_tries):
