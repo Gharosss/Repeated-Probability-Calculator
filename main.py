@@ -63,7 +63,7 @@ def calculate(occurence_chance):
             occurence_chance_after_tries_display = f"{occurence_chance_after_tries:.3f}"
             
         if(occurence_chance_after_tries == 0):
-            print("The probability is too low to calculate")
+            print("The probability is too low to calculate. PLease enter a value higher than 5E-29")
             return
         
         difference = Decimal(0.5) - occurence_chance_after_tries
