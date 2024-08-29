@@ -46,7 +46,7 @@ def calculate(occurence_chance, target_probability = Decimal(0.5)):
     # The minimum probability that can be calculated with the current version of the method.
     LOWER_PROBABILITY_LIMIT = "5E-29" 
     # A coefficient for the step size estimation. Higher values decrease the number of steps it takes to reach the target probability but may lead to overshooting.
-    ESTIMATION_COEFFICIENT = Decimal(1.5) # Recommended value is 1.5 as no overshooting was observed.
+    ESTIMATION_COEFFICIENT = Decimal(1.5) # Recommended value is 1.5 as no overshooting was observed when target probability is 0.5.
     
     scientific_version = False
     # Detect scientific version based on negative probability input and convert it back to a positive value
@@ -64,7 +64,7 @@ def calculate(occurence_chance, target_probability = Decimal(0.5)):
     # Initial guess for jump size in number of tries
     jump_size_estimate = math.floor(1/occurence_chance/2)
     
-    # Loop until the probability of occurrence after many tries becomes greater than or equal to 50%
+    # Loop until the probability of occurrence after many tries becomes greater than or equal to the target probability
     while(current_prob < target_probability):
         if (jump_size_estimate < 1): # This prevents the guesstimate to get smaller than 1 in the final steps
             jump_size_estimate = 1
@@ -98,7 +98,7 @@ def calculate(occurence_chance, target_probability = Decimal(0.5)):
         # Adjust the jump size for the next iteration
         jump_size_estimate = math.floor((difference/occurence_chance) * ESTIMATION_COEFFICIENT)
         
-        # On the non-scientific version, stops further calculations after the rounded probability is 50% or more
+        # On the non-scientific version, stops further calculations after the rounded probability is more than or equal to the target probability
         if(float(current_prob_display) >= target_probability and not scientific_version):
             print(f"It becomes probable after {colors.GREEN}{num_of_tries_display} tries{colors.RESET}")
             return
