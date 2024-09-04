@@ -2,11 +2,13 @@ from fractions import Fraction
 from decimal import Decimal, getcontext
 from components import *
 
-# Set a higher precision for Decimal calculations
-getcontext().prec = 100  # Increase precision
 
 # Calculate the chance of occurence for values that are larger than 1E-16
 def calculate_regular_chances(occurence_chance, target_percentage):
+    
+    # Convert the number to a string
+    getcontext().prec = max(check_length_after_decimal(occurence_chance) + 5, 5)
+    
     target_probability=Fraction(target_percentage, 100)
     scientific_version = False
     if occurence_chance < 0: 
